@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="so">
+<head>
+  <meta charset="utf-8">
+  <title>Simple Shop (HTML kaliya)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body>
+  <h1>Simple Shop (HTML kaliya)</h1>
+  <p>Ku dar alaabta cart-ka adigoo gujinaya "Add to Cart".</p>
+
+  <!-- Liiska alaabta -->
+  <section id="products">
+    <h2>Alaabooyinka</h2>
+    <ul>
+      <!-- Alaabta waxaa lagu qeexay data attributes si JS uu uga akhriyo -->
+      <li>
+        <strong>Perfume Rose</strong>
+        <br>Price: $12.50
+        <br><button data-id="p1" data-name="Perfume Rose" data-price="12.5">Add to Cart</button>
+      </li>
+
+      <li>
+        <strong>Perfume Oud</strong>
+        <br>Price: $20.00
+        <br><button data-id="p2" data-name="Perfume Oud" data-price="20">Add to Cart</button>
+      </li>
+
+      <li>
+        <strong>Perfume Citrus</strong>
+        <br>Price: $9.75
+        <br><button data-id="p3" data-name="Perfume Citrus" data-price="9.75">Add to Cart</button>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Cart -->
+  <section id="cart">
+    <h2>Cart</h2>
+    <p id="cart-empty">Cart-ka waa faaruq</p>
+    <table id="cart-table" border="1" cellpadding="6" style="display:none; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th>Magac</th><th>Qiimo</th><th>Tirada</th><th>Subtotal</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><strong>Total</strong></td>
+          <td colspan="2" id="cart-total">$0.00</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <p>
+      <button id="clear-cart">Clear Cart</button>
+      <button id="checkout">Checkout</button>
+    </p>
+
+    <div id="checkout-msg" aria-live="polite"></div>
+  </section>
+
+  <!-- JavaScript (cart logic) -->
+  <script>
+    // Cart object: key = product id, value = {id,name,price,qty}
+    const cart = {};
+
+    // Format number to 2 decimals
+    function fmt(n){
+      return '$' + Number(n).toFixed(2);
+    }
+
+    // Update cart UI
+    function renderCart(){
+      const tbody = document.querySelector('#cart-table tbody');
+      const table = document.getElementById('cart-table');
+      const empty = document.getElementById('cart-empty');
+      const totalEl = document.getElementById('cart-total');
+      tbody.innerHTML = '';
+
+      const items = Object.values(cart);
+      if(items.length === 0){
+        table.style.display = 'none';
+        empty.style.display = '';
+        totalEl.textContent = fmt(0);
+        return;
+      }
+
+      table.style.display = '';
+      empty.style.display = 'none';
+
+      let total = 0;
+      items.forEach(item => {
+        const row = document.createElement('tr');
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = item.name;
+        row.appendChild(nameTd);
+
+        const priceTd = document.createElement('td');
+        priceTd.textContent = fmt(item.price);
+        row.appendChild(priceTd);
+
+        const qtyTd = document.createElement('td');
+        qtyTd.textContent = item.qty;
+        row.appendChild(qtyTd);
+
+        const subTd = document.createElement('td');
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        subTd.textContent = fmt(subtotal);
+        row.appendChild(subTd);
+
+        const actionTd = document.createElement('td');
+        // Increase button
+        const inc = document.createElement('button');
+        inc.textContent = '+';
+        inc.addEventListener('click', () => {
+          item.qty += 1;
+          renderCart();
+        });
+        actionTd.appendChild(inc);
+
+        // Decrease button
+        const dec = document.createElement('button');
+        dec.textContent = '-';
+        dec.addEventListener('click', () => {
+          item.qty -= 1;
+          if(item.qty <= 0) delete cart[item.id];
+          renderCart();
+        });
+        actionTd.appendChild(dec);
+
+        // Remove button
+        const rem = document.createElement('button');
+        rem.textContent = 'Remove';
+        rem.addEventListener('click', () => {
+          delete cart[item.id];
+          renderCart();
+        });
+        actionTd.appendChild(rem);
+
+        row.appendChild(actionTd);
+
+        tbody.appendChild(row);
+      });
+
+      totalEl.textContent = fmt(total);
+    }
+
+    // Add to cart handler
+    document.querySelectorAll('#products button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const price = parseFloat(btn.getAttribute('data-price'));
+
+        if(cart[id]){
+          cart[id].qty += 1;
+        } else {
+          cart[id] = { id, name, price, qty: 1 };
+        }
+        renderCart();
+      });
+    });
+
+    // Clear cart
+    document.getElementById('clear-cart').addEventListener('click', () => {
+      for(const k in cart) delete cart[k];
+      renderCart();
+      document.getElementById('checkout-msg').textContent = '';
+    });
+
+    // Checkout (fake)
+    document.getElementById('checkout').addEventListener('click', () => {
+      const items = Object.values(cart);
+      if(items.length === 0){
+        document.getElementById('checkout-msg').textContent = 'Cart-ku waa faaruq, fadlan ku dar wax.';
+        return;
+      }
+      // Simple receipt
+      let receipt = 'Waad mahadsan tahay! Waxaad dalbatay:\n';
+      items.forEach(it => {
+        receipt += `${it.qty} x ${it.name} = ${fmt(it.price * it.qty)}\n`;
+      });
+      receipt += 'Total: ' + document.getElementById('cart-total').textContent;
+
+      // Muujin fariin (ma jiro server, tani waa fake)
+      document.getElementById('checkout-msg').textContent = receipt;
+      // Halkan waad nadiifin kartaa cart-ka
+      for(const k in cart) delete cart[k];
+      renderCart();
+    });
+
+    // Initial render
+    renderCart();
+  </script>
+</body>
+</html>
